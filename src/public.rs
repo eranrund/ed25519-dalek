@@ -60,8 +60,8 @@ impl<'a> From<&'a SecretKey> for PublicKey {
         let mut hash: [u8; 64] = [0u8; 64];
         let mut digest: [u8; 32] = [0u8; 32];
 
-        h.input(secret_key.as_bytes());
-        hash.copy_from_slice(h.result().as_slice());
+        h.update(secret_key.as_bytes());
+        hash.copy_from_slice(h.finalize().as_slice());
 
         digest.copy_from_slice(&hash[..32]);
 
@@ -133,7 +133,8 @@ impl PublicKey {
             return Err(InternalError::BytesLengthError {
                 name: "PublicKey",
                 length: PUBLIC_KEY_LENGTH,
-            }.into());
+            }
+            .into());
         }
         let mut bits: [u8; 32] = [0u8; 32];
         bits.copy_from_slice(&bytes[..32]);
@@ -197,17 +198,20 @@ impl PublicKey {
         let k: Scalar;
 
         let ctx: &[u8] = context.unwrap_or(b"");
-        debug_assert!(ctx.len() <= 255, "The context must not be longer than 255 octets.");
+        debug_assert!(
+            ctx.len() <= 255,
+            "The context must not be longer than 255 octets."
+        );
 
         let minus_A: EdwardsPoint = -self.1;
 
-        h.input(b"SigEd25519 no Ed25519 collisions");
-        h.input(&[1]); // Ed25519ph
-        h.input(&[ctx.len() as u8]);
-        h.input(ctx);
-        h.input(signature.R.as_bytes());
-        h.input(self.as_bytes());
-        h.input(prehashed_message.result().as_slice());
+        h.update(b"SigEd25519 no Ed25519 collisions");
+        h.update(&[1]); // Ed25519ph
+        h.update(&[ctx.len() as u8]);
+        h.update(ctx);
+        h.update(signature.R.as_bytes());
+        h.update(self.as_bytes());
+        h.update(prehashed_message.finalize().as_slice());
 
         k = Scalar::from_hash(h);
         R = EdwardsPoint::vartime_double_scalar_mul_basepoint(&k, &(minus_A), &signature.s);
@@ -286,8 +290,7 @@ impl PublicKey {
         &self,
         message: &[u8],
         signature: &ed25519::Signature,
-    ) -> Result<(), SignatureError>
-    {
+    ) -> Result<(), SignatureError> {
         let signature = InternalSignature::try_from(signature)?;
 
         let mut h: Sha512 = Sha512::new();
@@ -306,9 +309,9 @@ impl PublicKey {
             return Err(InternalError::VerifyError.into());
         }
 
-        h.input(signature.R.as_bytes());
-        h.input(self.as_bytes());
-        h.input(&message);
+        h.update(signature.R.as_bytes());
+        h.update(self.as_bytes());
+        h.update(&message);
 
         k = Scalar::from_hash(h);
         R = EdwardsPoint::vartime_double_scalar_mul_basepoint(&k, &(minus_A), &signature.s);
@@ -328,12 +331,7 @@ impl Verifier<ed25519::Signature> for PublicKey {
     ///
     /// Returns `Ok(())` if the signature is valid, and `Err` otherwise.
     #[allow(non_snake_case)]
-    fn verify(
-        &self,
-        message: &[u8],
-        signature: &ed25519::Signature
-    ) -> Result<(), SignatureError>
-    {
+    fn verify(&self, message: &[u8], signature: &ed25519::Signature) -> Result<(), SignatureError> {
         let signature = InternalSignature::try_from(signature)?;
 
         let mut h: Sha512 = Sha512::new();
@@ -341,9 +339,9 @@ impl Verifier<ed25519::Signature> for PublicKey {
         let k: Scalar;
         let minus_A: EdwardsPoint = -self.1;
 
-        h.input(signature.R.as_bytes());
-        h.input(self.as_bytes());
-        h.input(&message);
+        h.update(signature.R.as_bytes());
+        h.update(self.as_bytes());
+        h.update(&message);
 
         k = Scalar::from_hash(h);
         R = EdwardsPoint::vartime_double_scalar_mul_basepoint(&k, &(minus_A), &signature.s);

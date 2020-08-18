@@ -15,9 +15,9 @@ use rand::{CryptoRng, RngCore};
 #[cfg(feature = "serde")]
 use serde::de::Error as SerdeError;
 #[cfg(feature = "serde")]
-use serde::de::Visitor;
-#[cfg(feature = "serde")]
 use serde::de::SeqAccess;
+#[cfg(feature = "serde")]
+use serde::de::Visitor;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
@@ -84,12 +84,16 @@ impl Keypair {
             return Err(InternalError::BytesLengthError {
                 name: "Keypair",
                 length: KEYPAIR_LENGTH,
-            }.into());
+            }
+            .into());
         }
         let secret = SecretKey::from_bytes(&bytes[..SECRET_KEY_LENGTH])?;
         let public = PublicKey::from_bytes(&bytes[SECRET_KEY_LENGTH..])?;
 
-        Ok(Keypair{ secret: secret, public: public })
+        Ok(Keypair {
+            secret: secret,
+            public: public,
+        })
     }
 
     /// Generate an ed25519 keypair.
@@ -132,7 +136,10 @@ impl Keypair {
         let sk: SecretKey = SecretKey::generate(csprng);
         let pk: PublicKey = (&sk).into();
 
-        Keypair{ public: pk, secret: sk }
+        Keypair {
+            public: pk,
+            secret: sk,
+        }
     }
 
     /// Sign a `prehashed_message` with this `Keypair` using the
@@ -172,7 +179,7 @@ impl Keypair {
     /// // Create a hash digest object which we'll feed the message into:
     /// let mut prehashed: Sha512 = Sha512::new();
     ///
-    /// prehashed.input(message);
+    /// prehashed.update(message);
     /// # }
     /// #
     /// # #[cfg(not(feature = "std"))]
@@ -216,7 +223,7 @@ impl Keypair {
     /// # let keypair: Keypair = Keypair::generate(&mut csprng);
     /// # let message: &[u8] = b"All I want is to pet all of the dogs.";
     /// # let mut prehashed: Sha512 = Sha512::new();
-    /// # prehashed.input(message);
+    /// # prehashed.update(message);
     /// #
     /// let context: &[u8] = b"Ed25519DalekSignPrehashedDoctest";
     ///
@@ -245,16 +252,17 @@ impl Keypair {
     {
         let expanded: ExpandedSecretKey = (&self.secret).into(); // xxx thanks i hate this
 
-        expanded.sign_prehashed(prehashed_message, &self.public, context).into()
+        expanded
+            .sign_prehashed(prehashed_message, &self.public, context)
+            .into()
     }
 
     /// Verify a signature on a message with this keypair's public key.
     pub fn verify(
         &self,
         message: &[u8],
-        signature: &ed25519::Signature
-    ) -> Result<(), SignatureError>
-    {
+        signature: &ed25519::Signature,
+    ) -> Result<(), SignatureError> {
         self.public.verify(message, signature)
     }
 
@@ -294,7 +302,7 @@ impl Keypair {
     /// let message: &[u8] = b"All I want is to pet all of the dogs.";
     ///
     /// let mut prehashed: Sha512 = Sha512::new();
-    /// prehashed.input(message);
+    /// prehashed.update(message);
     ///
     /// let context: &[u8] = b"Ed25519DalekSignPrehashedDoctest";
     ///
@@ -302,7 +310,7 @@ impl Keypair {
     ///
     /// // The sha2::Sha512 struct doesn't implement Copy, so we'll have to create a new one:
     /// let mut prehashed_again: Sha512 = Sha512::default();
-    /// prehashed_again.input(message);
+    /// prehashed_again.update(message);
     ///
     /// let verified = keypair.public.verify_prehashed(prehashed_again, Some(context), &sig);
     ///
@@ -330,7 +338,8 @@ impl Keypair {
     where
         D: Digest<OutputSize = U64>,
     {
-        self.public.verify_prehashed(prehashed_message, context, signature)
+        self.public
+            .verify_prehashed(prehashed_message, context, signature)
     }
 
     /// Strictly verify a signature on a message with this keypair's public key.
@@ -400,8 +409,7 @@ impl Keypair {
         &self,
         message: &[u8],
         signature: &ed25519::Signature,
-    ) -> Result<(), SignatureError>
-    {
+    ) -> Result<(), SignatureError> {
         self.public.verify_strict(message, signature)
     }
 }
@@ -443,9 +451,11 @@ impl<'d> Deserialize<'d> for Keypair {
             type Value = Keypair;
 
             fn expecting(&self, formatter: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
-                formatter.write_str("An ed25519 keypair, 64 bytes in total where the secret key is \
-                                     the first 32 bytes and is in unexpanded form, and the second \
-                                     32 bytes is a compressed point for a public key.")
+                formatter.write_str(
+                    "An ed25519 keypair, 64 bytes in total where the secret key is \
+                     the first 32 bytes and is in unexpanded form, and the second \
+                     32 bytes is a compressed point for a public key.",
+                )
             }
 
             fn visit_bytes<E>(self, bytes: &[u8]) -> Result<Keypair, E>
@@ -460,7 +470,7 @@ impl<'d> Deserialize<'d> for Keypair {
                 let public_key = PublicKey::from_bytes(&bytes[SECRET_KEY_LENGTH..]);
 
                 if let (Ok(secret), Ok(public)) = (secret_key, public_key) {
-                    Ok(Keypair{ secret, public })
+                    Ok(Keypair { secret, public })
                 } else {
                     Err(SerdeError::invalid_length(bytes.len(), &self))
                 }
@@ -468,7 +478,7 @@ impl<'d> Deserialize<'d> for Keypair {
 
             fn visit_seq<A>(self, mut seq: A) -> Result<Keypair, A::Error>
             where
-                A: SeqAccess<'d>
+                A: SeqAccess<'d>,
             {
                 if let Some(len) = seq.size_hint() {
                     if len != KEYPAIR_LENGTH {
@@ -480,19 +490,20 @@ impl<'d> Deserialize<'d> for Keypair {
                 let mut bytes: [u8; KEYPAIR_LENGTH] = [0u8; KEYPAIR_LENGTH];
 
                 for i in 0..KEYPAIR_LENGTH {
-                    bytes[i] = seq.next_element()?.ok_or_else(|| SerdeError::invalid_length(i, &self))?;
+                    bytes[i] = seq
+                        .next_element()?
+                        .ok_or_else(|| SerdeError::invalid_length(i, &self))?;
                 }
 
                 let secret_key = SecretKey::from_bytes(&bytes[..SECRET_KEY_LENGTH]);
                 let public_key = PublicKey::from_bytes(&bytes[SECRET_KEY_LENGTH..]);
 
                 if let (Ok(secret), Ok(public)) = (secret_key, public_key) {
-                    Ok(Keypair{ secret, public })
+                    Ok(Keypair { secret, public })
                 } else {
                     Err(SerdeError::invalid_length(bytes.len(), &self))
                 }
             }
-
         }
         deserializer.deserialize_bytes(KeypairVisitor)
     }
