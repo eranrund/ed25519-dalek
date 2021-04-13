@@ -25,7 +25,7 @@ features = ["nightly", "batch"]
 #curve25519-dalek = { version = "3", default-features = false }
 
 # TODO fork to our org - this is due to rand :/
-curve25519-dalek = { git = "https://github.com/PaulGrandperrin/curve25519-dalek.git", rev = "d0dacb2" }
+curve25519-dalek = { git = "https://github.com/PaulGrandperrin/curve25519-dalek.git", rev = "d0dacb2", default-features = false }
 
 
 ed25519 = { version = "1", default-features = false }
