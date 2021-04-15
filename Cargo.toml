@@ -25,7 +25,7 @@ features = ["nightly", "batch"]
 #curve25519-dalek = { version = "3", default-features = false }
 
 # gets us rand 0.8
-curve25519-dalek = { git = "https://github.com/dalek-cryptography/curve25519-dalek.git", rev = "127c9e9", default-features = false }
+curve25519-dalek = { version = "4.0.0-pre.0", default-features = false }
 
 
 ed25519 = { version = "1", default-features = false }
