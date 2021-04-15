@@ -24,8 +24,8 @@ features = ["nightly", "batch"]
 [dependencies]
 #curve25519-dalek = { version = "3", default-features = false }
 
-# TODO fork to our org - this is due to rand :/
-curve25519-dalek = { git = "https://github.com/PaulGrandperrin/curve25519-dalek.git", rev = "d0dacb2", default-features = false }
+# gets us rand 0.8
+curve25519-dalek = { git = "https://github.com/dalek-cryptography/curve25519-dalek.git", rev = "127c9e9", default-features = false }
 
 
 ed25519 = { version = "1", default-features = false }
